@@ -747,6 +747,21 @@ Coord findKing(string colour) {
     return Coord(-1, -1);
 }
 
+string boardToString() {
+    string s = "";
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j] == nullptr) {
+                s += ".";
+            } else {
+                s += board[i][j]->symbol;
+                s += board[i][j]->colour[0];
+            }
+        }
+    }
+    return s;
+}
+
 void clearScreen() {
     #ifdef _WIN32
         system("cls");
@@ -825,21 +840,6 @@ bool isStalemate(string colour) {
         }
     }
     return true;
-}
-
-string boardToString() {
-    string s = "";
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (board[i][j] == nullptr) {
-                s += ".";
-            } else {
-                s += board[i][j]->symbol;
-                s += board[i][j]->colour[0];  // 'w' or 'b'
-            }
-        }
-    }
-    return s;
 }
 
 int main() {
