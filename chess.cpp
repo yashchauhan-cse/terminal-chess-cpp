@@ -44,6 +44,8 @@ string boardToString();
 
 Coord findKing(string colour);
 
+int materialAdvantage();
+
 void fillBoard();
 void cleanBoard();
 void clearScreen();
@@ -71,11 +73,13 @@ public:
     Piece(string c, string name, char sym, Coord p) : colour(c), name(name), symbol(sym), pos(p) {}
     virtual bool canMove(Coord src, Coord dst) = 0;
     virtual void findMoves(Coord src) = 0;
+    virtual int getValue() const = 0;
     virtual ~Piece() {}
 };
 
 class Knight : public Piece {
 public:
+    int getValue() const { return 3; }
     Knight(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
         int X = abs(dst.x - src.x);
@@ -110,6 +114,7 @@ public:
 
 class Bishop : public Piece {
 public:
+    int getValue() const { return 3; }
     Bishop(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
         int X = abs(dst.x - src.x);
@@ -163,6 +168,7 @@ public:
 
 class Rook : public Piece {
 public:
+    int getValue() const { return 5; }
     bool hasMoved = false;
     Rook(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
@@ -221,6 +227,7 @@ public:
 class King : public Piece {
 public:
     bool hasMoved = false;
+    int getValue() const { return 1000; }
     King(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
         int X = abs(dst.x - src.x);
@@ -291,6 +298,7 @@ public:
 
 class Queen : public Piece {
 public:
+    int getValue() const { return 9; }
     Queen(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
         int X = abs(dst.x - src.x);
@@ -388,6 +396,7 @@ public:
 
 class Pawn : public Piece {
 public:
+    int getValue() const { return 1; }
     Pawn(string c, string name, char sym, Coord pos) : Piece(c, name, sym, pos) {}
     bool canMove(Coord src, Coord dst) override {
         int X = abs(dst.x - src.x);
@@ -523,6 +532,24 @@ void displayBoard() {
         cout << endl << endl;
     }
     cout << DIM_GRAY << "      a   b   c   d   e   f   g   h" << RESET << endl << endl << endl;
+    cout << "Captured by White: " << NEON_CYAN;
+    for (char c : whiteCaptured) {
+        cout << c << " ";
+    }
+    cout << RESET << endl << endl;
+    cout << "Captured by Black: " << NEON_YELLOW;
+    for (char c : blackCaptured) {
+        cout << c << " ";
+    }
+    cout << RESET << endl << endl;
+
+    int advantage = materialAdvantage();
+    if (advantage > 0)
+        cout << NEON_YELLOW << "White is ahead by +" << advantage << RESET << endl;
+    else if (advantage < 0)
+        cout << NEON_CYAN << "Black is ahead by +" << abs(advantage) << RESET << endl;
+    else
+        cout << DIM_GRAY << "Material is equal" << RESET << endl;
 }
 
 bool sourceMoveValidate(Coord src) {
@@ -560,7 +587,7 @@ bool takeMove(bool whiteTurn) {
     }
 
     string move;
-    cout << (whiteTurn ? "White's turn: " : "Black's turn: ");
+    cout << endl << (whiteTurn ? "White's turn: " : "Black's turn: ");
     getline(cin, move);
 
     if (move.length() < 4) {
@@ -641,8 +668,15 @@ bool takeMove(bool whiteTurn) {
             return false;
         }
 
-        if (captured != nullptr) delete captured;
-        if (isEnPassant && epCaptured != nullptr) delete epCaptured;
+        if (isEnPassant && epCaptured != nullptr) {
+            (currentColour == "white") ? whiteCaptured.push_back(epCaptured->symbol) : blackCaptured.push_back(epCaptured->symbol);
+            delete epCaptured;
+        }
+
+        if (captured != nullptr) {
+            (currentColour == "white") ? whiteCaptured.push_back(captured->symbol) : blackCaptured.push_back(captured->symbol);
+            delete captured;
+        }
 
         if (pieceName == "King" && abs(dst.x - src.x) == 2) {
             int row = dst.y;
@@ -747,21 +781,6 @@ Coord findKing(string colour) {
     return Coord(-1, -1);
 }
 
-string boardToString() {
-    string s = "";
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (board[i][j] == nullptr) {
-                s += ".";
-            } else {
-                s += board[i][j]->symbol;
-                s += board[i][j]->colour[0];
-            }
-        }
-    }
-    return s;
-}
-
 void clearScreen() {
     #ifdef _WIN32
         system("cls");
@@ -840,6 +859,34 @@ bool isStalemate(string colour) {
         }
     }
     return true;
+}
+
+string boardToString() {
+    string s = "";
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j] == nullptr) {
+                s += ".";
+            } else {
+                s += board[i][j]->symbol;
+                s += board[i][j]->colour[0];
+            }
+        }
+    }
+    return s;
+}
+
+int materialAdvantage() {
+    int whiteMaterial = 0, blackMaterial = 0;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j] != nullptr && board[i][j]->name != "King") {
+                if (board[i][j]->colour == "white") whiteMaterial += board[i][j]->getValue();
+                else blackMaterial += board[i][j]->getValue();
+            }
+        }
+    }
+    return whiteMaterial - blackMaterial;
 }
 
 int main() {
